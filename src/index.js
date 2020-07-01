@@ -1,3 +1,12 @@
+// Sending events from server to client
+// socket.emit --> sends event to a specific client
+// io.emit --> sends an event to every conneced client
+// socket.broadcast.emit --> sends an event to every connected client, except the client who sends
+
+// sending events in rooms
+// io.to.emit --> it emits an event to everybody in an specific room.
+// socket.broadcast.to.emit --> sends an event in a room to every connected client, except the client who sends
+
 const path = require("path");
 const http = require("http");
 const express = require("express");
@@ -7,6 +16,13 @@ const {
   generateMessage,
   generateLocationMessage,
 } = require("./utils/messages");
+
+const {
+  addUser,
+  removeUser,
+  getUser,
+  getUsersInRoom,
+} = require("./utils/users");
 
 const app = express();
 const server = http.createServer(app);
@@ -22,14 +38,27 @@ app.use(express.static(publicDirectoryPath));
 io.on("connection", (socket) => {
   console.log("New websocket connection.");
 
-  // to send a msg to a particular client
-  socket.emit("message", generateMessage("Welcome"));
+  socket.on("join", (options, callback) => {
+    const { error, user } = addUser({ id: socket.id, ...options });
 
-  socket.broadcast.emit("message", generateMessage("A new user has joined!"));
-  // this will send message to everybody except the socket who has sent the message
+    if (error) {
+      return callback(error);
+    }
+
+    socket.join(user.room);
+
+    // to send a msg to a particular client
+    socket.emit("message", generateMessage("Welcome"));
+
+    socket.broadcast
+      .to(user.room)
+      .emit("message", generateMessage(`${user.username} has joined!`));
+    // this will send message to everybody except the socket who has sent the message
+
+    callback();
+  });
 
   // to send msg to everyone
-
   socket.on("sendMessage", (message, callback) => {
     // checking for bad-words
     const filter = new Filter();
@@ -39,7 +68,7 @@ io.on("connection", (socket) => {
     }
 
     // callback to acknowledge the event
-    io.emit("message", generateMessage(message));
+    io.to("room").emit("message", generateMessage(message));
     callback();
   });
 
@@ -55,7 +84,14 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    io.emit("message", generateMessage("A user has left"));
+    const user = removeUser(socket.id);
+
+    if (user) {
+      io.to(user.room).emit(
+        "message",
+        generateMessage(`${user.username}  has left`)
+      );
+    }
   });
 });
 

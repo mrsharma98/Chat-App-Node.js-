@@ -10,6 +10,16 @@ const $messages = document.querySelector("#messages");
 
 // Templates
 const messageTemplate = document.querySelector("#message-template").innerHTML;
+const locationTemplate = document.querySelector("#location-message-template")
+  .innerHTML;
+
+// Options
+const { username, room } = Qs.parse(location.search, {
+  ignoreQueryPrefix: true,
+});
+// location is a environment variable
+// that will give us query string
+// ignoreQueryPrefix -  this will ignore ? in the start
 
 socket.on("message", (message) => {
   console.log(message);
@@ -17,12 +27,11 @@ socket.on("message", (message) => {
     message: message.text,
     createdAt: moment(message.createdAt).format("hh:mm a"),
   });
+  // this is the final html that is to be rendered
 
   $messages.insertAdjacentHTML("beforeend", html);
+  // for inserting html to the div
 });
-
-const locationTemplate = document.querySelector("#location-message-template")
-  .innerHTML;
 
 socket.on("locationMessage", (message) => {
   console.log(message);
@@ -72,4 +81,11 @@ $sendLocationButton.addEventListener("click", () => {
       $messageFormInput.focus();
     });
   });
+});
+
+socket.emit("join", { username, room }, (error) => {
+  if (error) {
+    alert(error);
+    location.href = "/";
+  }
 });
