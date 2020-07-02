@@ -1,7 +1,3 @@
-// *************
-// ** Styling **
-// *************
-
 // Sending events from server to client
 // socket.emit --> sends event to a specific client
 // io.emit --> sends an event to every conneced client
@@ -62,6 +58,11 @@ io.on("connection", (socket) => {
       );
     // this will send message to everybody except the socket who has sent the message
 
+    io.to(user.room).emit("roomData", {
+      room: user.room,
+      users: getUsersInRoom(user.room),
+    });
+
     callback();
   });
 
@@ -103,6 +104,10 @@ io.on("connection", (socket) => {
         "message",
         generateMessage("Admin", `${user.username}  has left`)
       );
+      io.to(user.room).emit("roomData", {
+        room: user.room,
+        users: getUsersInRoom(user.room),
+      });
     }
   });
 });
