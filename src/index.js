@@ -1,3 +1,7 @@
+// *************
+// ** Styling **
+// *************
+
 // Sending events from server to client
 // socket.emit --> sends event to a specific client
 // io.emit --> sends an event to every conneced client
@@ -48,11 +52,14 @@ io.on("connection", (socket) => {
     socket.join(user.room);
 
     // to send a msg to a particular client
-    socket.emit("message", generateMessage("Welcome"));
+    socket.emit("message", generateMessage("Admin", "Welcome"));
 
     socket.broadcast
       .to(user.room)
-      .emit("message", generateMessage(`${user.username} has joined!`));
+      .emit(
+        "message",
+        generateMessage("Admin", `${user.username} has joined!`)
+      );
     // this will send message to everybody except the socket who has sent the message
 
     callback();
@@ -60,6 +67,8 @@ io.on("connection", (socket) => {
 
   // to send msg to everyone
   socket.on("sendMessage", (message, callback) => {
+    const user = getUser(socket.id);
+
     // checking for bad-words
     const filter = new Filter();
 
@@ -68,15 +77,18 @@ io.on("connection", (socket) => {
     }
 
     // callback to acknowledge the event
-    io.to("room").emit("message", generateMessage(message));
+    io.to(user.room).emit("message", generateMessage(user.username, message));
     callback();
   });
 
   // sharing location
   socket.on("sendLocation", (coords, callback) => {
-    io.emit(
+    const user = getUser(socket.id);
+
+    io.to(user.room).emit(
       "locationMessage",
       generateLocationMessage(
+        user.username,
         `https://google.com/maps?q=${coords.latitude},${coords.longitude}`
       )
     );
@@ -89,7 +101,7 @@ io.on("connection", (socket) => {
     if (user) {
       io.to(user.room).emit(
         "message",
-        generateMessage(`${user.username}  has left`)
+        generateMessage("Admin", `${user.username}  has left`)
       );
     }
   });
